@@ -17,7 +17,16 @@ client$ scp server_proxy.rb node:proxy/main.rb
 usage:
 ```
 client$ ruby get_url.rb "https://example.com" 2&>/dev/null
+
 <!doctype html><html...
+```
+
+inspect all response lines:
+```
+client$ ruby debug.rb "https://example"
+
+total lines: 1
+nil "server error: HTTP error #404 Example DomainEx...
 ```
 
 check it's closed:

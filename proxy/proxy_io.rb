@@ -7,11 +7,29 @@ module ProxyIO
     @io ||= ::IO.popen "ssh -T node \"docker run --rm -i -v \\$(pwd)/proxy/main.rb:/main.rb -v \\$(pwd)/proxy/simple_zlib.rb:/simple_zlib.rb proxy ruby main.rb\"", "r+"
   end
 
+  SERVER_TIMEOUT = 16   # KEEP IN SYNC WITH server_proxy.rb
+  private_constant :SERVER_TIMEOUT
   require "timeout"
+
+
+  private_class_method def self.single_line
+    timeout = 4
+    ::Timeout.timeout(2 * timeout) do
+      fail unless io.wait_readable timeout
+      io.gets.chomp
+    end
+  end
+
+  def self.init
+    fail unless "press enter" == single_line
+    io.puts "\n"
+    fail unless "ready" == single_line
+  end
+
+
   # stops polling when server does not emit new lines for 4 seconds straight
-  private_class_method def self.read_response timeout = 4
-    server_timeout = 16   # KEEP IN SYNC WITH server_proxy.rb
-    fail "too big #wait_readable timeout (#{timeout} sec), should be <= #{server_timeout} (server timeout) / 4" if server_timeout < 4 * timeout
+  private_class_method def self.wait_multiple_lines timeout = 4
+    fail "too big #wait_readable timeout (#{timeout} sec), should be <= #{SERVER_TIMEOUT} (server timeout) / 4" if SERVER_TIMEOUT < 4 * timeout
     [].tap do |response_array|
       ::Timeout.timeout(2 * timeout) do
         loop do
@@ -26,19 +44,23 @@ module ProxyIO
 
   require_relative "lib/simple_zlib"
   require "json"
-  def self.get url
-    mtd = "GET"
-    io.puts "#{mtd} #{::SimpleZlib.encode url}"
-    json = ::JSON.parse read_response.assert_one{ |_| "response size: #{_.size}" }
+
+  private_class_method def self.unpack_line json_string
+    json = ::JSON.parse json_string
     case json["status"]
     when "success"
-      [json["code"], ::SimpleZlib.decode(json["body"])]
+      [::SimpleZlib.decode(json["body"]), json["code"]]
     when "error"
-      puts json["body"]
-      fail "server error"
+      "server error: #{json["body"]}"
     else
       fail "bad status #{json["status"].inspect}"
     end
+  end
+
+  def self.ensure_single_line url
+    mtd = "GET"
+    io.puts "#{mtd} #{::SimpleZlib.encode url}"
+    unpack_line wait_multiple_lines.assert_one
   end
 
 end

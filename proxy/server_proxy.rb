@@ -4,6 +4,7 @@ fail unless "\n" == gets
 puts "ready"
 
 require "nethttputils"
+NetHTTPUtils.logger.instance_variable_set(:@logdev, STDERR)
 get = lambda do |url|
   response = NetHTTPUtils.request_data url
   [Integer(response.instance_variable_get(:@last_response).code), SimpleZlib.encode(response)]

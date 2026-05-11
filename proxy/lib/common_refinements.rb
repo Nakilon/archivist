@@ -18,4 +18,14 @@ module Common
     end
   end
 
+  module RefinementString
+    refine ::String do
+
+      def shorten length = 50
+        sub(/(?<=.{#{length - 3}})....+/, "...")
+      end
+
+    end
+  end
+
 end
