@@ -6,15 +6,15 @@ puts "ready"
 require "nethttputils"
 NetHTTPUtils.logger.instance_variable_set(:@logdev, STDERR)
 get = lambda do |url|
-  response = NetHTTPUtils.request_data url
-  [Integer(response.instance_variable_get(:@last_response).code), SimpleZlib.encode(response)]
+  response = NetHTTPUtils.request_data url, timeout: 5, max_start_http_retry_delay: 1, max_read_retry_delay: 1    # WTF: these timeouts don't really work?
+  [Integer(response.instance_variable_get(:@last_response).code), response]
 end
 
 require "timeout"
 require_relative "simple_zlib.rb"
 require "json"
 begin
-  Timeout.timeout(16) do
+  Timeout.timeout(1000) do
     loop do
       break unless cmd = gets
       (mtd, encoded_url) = cmd.chomp.split(" ", 2)

@@ -1,0 +1,1 @@
+Every `resources/*.rb` should define method `dump`, that fills the correspondent `.../data` directory. Loading this folder should deterministically import the data by sorting members recursively -- it makes cashing and hashing trivial by design).

@@ -4,24 +4,25 @@ using ::Common::RefinementArray
 module ProxyIO
   require "io/wait"
   private_class_method def self.io
-    @io ||= ::IO.popen "ssh -T node \"docker run --rm -i -v \\$(pwd)/proxy/main.rb:/main.rb -v \\$(pwd)/proxy/simple_zlib.rb:/simple_zlib.rb proxy ruby main.rb\"", "r+"
+    @io ||= ::IO.popen "ssh -T node \"docker run --rm -i -v \\$(pwd)/proxy/main.rb:/main.rb -v \\$(pwd)/proxy/Gemfile:/Gemfile -v \\$(pwd)/proxy/simple_zlib.rb:/simple_zlib.rb proxy sh -c \\\"bundle install --quiet && bundle exec ruby main.rb\\\"\"", "r+"
   end
 
-  SERVER_TIMEOUT = 16   # KEEP IN SYNC WITH server_proxy.rb
+  SERVER_TIMEOUT = 512   # KEEP IN SYNC WITH server_proxy.rb
   private_constant :SERVER_TIMEOUT
   require "timeout"
 
 
-  private_class_method def self.single_line
-    timeout = 4
+  private_class_method def self.single_line timeout = 4
+    fail "too big #wait_readable timeout (#{timeout} sec), should be <= #{SERVER_TIMEOUT} (server timeout) / 4" if SERVER_TIMEOUT < 4 * timeout
     ::Timeout.timeout(2 * timeout) do
-      fail unless io.wait_readable timeout
-      io.gets.chomp
+      fail "timeout (after #{timeout} sec)" unless io.wait_readable timeout
+      fail "EOF" unless line = io.gets
+      line.chomp
     end
   end
 
   def self.init
-    fail unless "press enter" == single_line
+    fail unless "press enter" == single_line(7)    # this needs bigger timeout when with 'bundle install'
     io.puts "\n"
     fail unless "ready" == single_line
   end
@@ -61,6 +62,12 @@ module ProxyIO
     mtd = "GET"
     io.puts "#{mtd} #{::SimpleZlib.encode url}"
     unpack_line wait_multiple_lines.assert_one
+  end
+
+
+  def self.fast_get url, timeout = nil
+    io.puts "GET #{SimpleZlib.encode url}"
+    unpack_line single_line(*timeout)
   end
 
 end

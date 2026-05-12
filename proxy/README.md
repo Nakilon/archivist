@@ -1,12 +1,13 @@
 install:
 ```console
-client$ scp lib/simple_zlib.rb node:proxy/
 client$ scp Dockerfile node:proxy/
 client$ ssh node
 server$ cd proxy
 server$ docker build -t proxy .
 server$ exit
+client$ scp Gemfile node:proxy/
 client$ scp server_proxy.rb node:proxy/main.rb
+client$ scp lib/simple_zlib.rb node:proxy/
 ```
 
 update:

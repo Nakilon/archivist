@@ -22,7 +22,7 @@ module Common
     refine ::String do
 
       def shorten length = 50
-        sub(/(?<=.{#{length - 3}})....+/, "...")
+        sub(/(?<=.{#{length - 3}})....+/m, "...")
       end
 
     end
